@@ -1,0 +1,53 @@
+# Makefile simplificado - Compila directamente con raylib-web
+# Este Makefile asume que tienes raylib-web instalado o usarás una versión precompilada
+
+EMCC = emcc
+TARGET = tennis_emulator
+SRC = main.cpp
+
+# Buscar raylib (puede estar en diferentes ubicaciones)
+RAYLIB_PATH ?= $(shell find ~ -type d -name "raylib" 2>/dev/null | head -1)
+RAYLIB_SRC = $(RAYLIB_PATH)/src
+
+# Flags básicos para WebAssembly con raylib
+FLAGS = -s WASM=1 \
+        -s USE_GLFW=3 \
+        -s FULL_ES2=1 \
+        -s USE_WEBGL2=1 \
+        -s ASYNCIFY \
+        -s MODULARIZE=1 \
+        -s EXPORT_NAME="createTennisEmulatorModule" \
+        -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
+        -s ALLOW_MEMORY_GROWTH=1 \
+        -s INITIAL_MEMORY=67108864 \
+        -O2 \
+        -DPLATFORM_WEB \
+        -I$(RAYLIB_SRC) \
+        -L$(RAYLIB_SRC) \
+        -lraylib
+
+all:
+	@echo "Compilando tennis_emulator a WebAssembly..."
+	@echo "Asegúrate de tener Emscripten instalado y activado (source emsdk/emsdk_env.sh)"
+	@if [ -z "$(RAYLIB_PATH)" ]; then \
+		echo "ERROR: No se encontró raylib. Por favor, instálalo o define RAYLIB_PATH"; \
+		echo "Ejemplo: make RAYLIB_PATH=/ruta/a/raylib"; \
+		exit 1; \
+	fi
+	@echo "Usando raylib en: $(RAYLIB_PATH)"
+	$(EMCC) $(SRC) $(FLAGS) -o ../$(TARGET).js
+	@echo "Compilación completada. Archivos generados:"
+	@echo "  - ../$(TARGET).js"
+	@echo "  - ../$(TARGET).wasm"
+	@echo ""
+	@echo "NOTA: Mueve estos archivos a public/cpp/ para que sean accesibles:"
+	@echo "  mkdir -p ../public/cpp"
+	@echo "  cp ../$(TARGET).js ../public/cpp/"
+	@echo "  cp ../$(TARGET).wasm ../public/cpp/"
+
+clean:
+	rm -f ../$(TARGET).js ../$(TARGET).wasm ../$(TARGET).html
+	rm -f ../public/cpp/$(TARGET).js ../public/cpp/$(TARGET).wasm
+
+.PHONY: all clean
+
