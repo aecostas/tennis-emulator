@@ -4,6 +4,7 @@
 # Este script compila el código C++ a WebAssembly
 
 set -e
+set -o pipefail
 
 echo "🔨 Compilando Tennis Emulator a WebAssembly..."
 echo ""
@@ -152,14 +153,9 @@ echo ""
 echo "🔨 Compilando..."
 echo "   Flags: ${FLAGS[*]}"
 cd "$SRC_DIR"
-emcc main.cpp "${FLAGS[@]}" -o "$BUILD_DIR/$TARGET.js" 2>&1 | tee /tmp/emcc_output.log || {
-    echo ""
-    echo "❌ Error durante la compilación. Últimas líneas del log:"
-    tail -20 /tmp/emcc_output.log
-    exit 1
-}
 
-if [ $? -eq 0 ]; then
+# Compilar y capturar el código de salida correctamente
+if emcc main.cpp "${FLAGS[@]}" -o "$BUILD_DIR/$TARGET.js" 2>&1 | tee /tmp/emcc_output.log; then
     echo ""
     echo "✅ Compilación exitosa!"
     echo "   Archivos generados en: $BUILD_DIR"
@@ -168,6 +164,9 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "🚀 Ahora puedes ejecutar: npm run dev"
 else
+    echo ""
+    echo "❌ Error durante la compilación. Últimas líneas del log:"
+    tail -20 /tmp/emcc_output.log
     echo ""
     echo "❌ Error en la compilación"
     echo "   Verifica que Emscripten esté correctamente instalado"

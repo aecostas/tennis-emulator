@@ -16,7 +16,6 @@
     "build:wasm:make": "cd src/cpp && chmod +x build-with-make.sh && ./build-with-make.sh",
     "build:raylib": "cd src/cpp && chmod +x compile-raylib.sh && ./compile-raylib.sh",
     "build:wasm:help": "echo 'Para compilar WebAssembly necesitas:' && echo '1. Emscripten instalado y activado (source emsdk/emsdk_env.sh)' && echo '2. Raylib instalado (git clone https://github.com/raysan5/raylib.git)' && echo '' && echo 'Scripts disponibles:' && echo '  npm run build:raylib      - Compila raylib para WebAssembly' && echo '  npm run build:wasm        - Compila tu código (compila raylib si es necesario)' && echo '  npm run build:wasm:make   - Compila usando Makefile' && echo '  npm run dev:watch         - Ejecuta dev + watcher para C++ (recompila automáticamente)' && echo '' && echo 'Con raylib personalizado:' && echo '  RAYLIB_PATH=/ruta/a/raylib npm run build:raylib' && echo '  RAYLIB_PATH=/ruta/a/raylib npm run build:wasm'",
-    "postbuild:wasm": "echo '✅ Compilación completada. Los archivos están en public/cpp/' && echo '🚀 Ahora puedes ejecutar: npm run dev'",
     "predev": "node -e \"const fs=require('fs'); if(!fs.existsSync('public/cpp/tennis_emulator.js')) { console.log('⚠️  Advertencia: WebAssembly no compilado. Ejecuta: npm run build:wasm'); }\" || true"
   },
   "dependencies": {
