@@ -155,7 +155,7 @@ echo "   Flags: ${FLAGS[*]}"
 cd "$SRC_DIR"
 
 # Compilar y capturar el código de salida correctamente
-if emcc main.cpp "${FLAGS[@]}" -o "$BUILD_DIR/$TARGET.js" 2>&1 | tee /tmp/emcc_output.log; then
+if emcc main.cpp Court.cpp "${FLAGS[@]}" -o "$BUILD_DIR/$TARGET.js" 2>&1 | tee /tmp/emcc_output.log; then
     echo ""
     echo "✅ Compilación exitosa!"
     echo "   Archivos generados en: $BUILD_DIR"

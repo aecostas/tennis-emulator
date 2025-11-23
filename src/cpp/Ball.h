@@ -4,7 +4,6 @@
 #include "raylib.h"
 #include <cmath>  // al inicio del archivo
 
-// Clase que encapsula la pelota
 class Ball {
 private:
     Vector2 position;
@@ -18,7 +17,6 @@ private:
     const float minHeight = 1.0f; // Altura mínima para detener la pelota
 
 public:
-    // Constructor: recibe el radio, la altura inicial y el coeficiente de restitución
     Ball(float x, float radius, float initialHeight, Color col, float spd, float rest) 
         : position({x, initialHeight}), radius(radius), color(col), speed(spd), isMoving(true), restitution(rest) {}
       
