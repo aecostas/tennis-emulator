@@ -4,6 +4,7 @@
 #include "raylib.h"
 #include "Court.h"
 #include <cmath>
+#include <vector>
 
 class Ball3D {
 private:
@@ -14,6 +15,9 @@ private:
     Vector3 velocity;       // Velocidad 3D
     bool isMoving;
     float previousZ;        // Posición Z anterior para detectar cruce de la red
+    std::vector<Vector3> trail;  // Estela de posiciones anteriores
+    bool showTrail;         // Indica si se muestra la estela
+    static const size_t MAX_TRAIL_POINTS = 30;  // Número máximo de puntos en la estela
 
     const float gravity = 980.0f;      // Gravedad en px/s^2
     const float restitution = 0.7f;    // Rebote vertical
@@ -78,8 +82,11 @@ private:
     }
 
 public:
-    Ball3D(Vector3 pos, float rad, Color col, Vector3 vel, Vector3 spn = {0.0f, 0.0f, 0.0f})
-        : position(pos), radius(rad), color(col), velocity(vel), spin(spn), isMoving(true), previousZ(pos.z) {}
+    Ball3D(Vector3 pos, float rad, Color col, Vector3 vel, Vector3 spn = {0.0f, 0.0f, 0.0f}, bool showTrail = true)
+        : position(pos), radius(rad), color(col), velocity(vel), spin(spn), isMoving(true), previousZ(pos.z), showTrail(showTrail) {
+        trail.clear();
+        trail.push_back(pos);  // Inicializar con la posición inicial
+    }
 
         void Update(float deltaTime, float floorY, float maxX, float maxZ, float netZ, const Court& court) {
             if (!isMoving) return;
@@ -98,6 +105,12 @@ public:
             
             // Actualizar posición
             position = newPosition;
+            
+            // Agregar posición actual a la estela
+            trail.push_back(position);
+            if (trail.size() > MAX_TRAIL_POINTS) {
+                trail.erase(trail.begin());  // Eliminar el punto más antiguo
+            }
             
             // Guardar posición Z actual para la próxima actualización
             previousZ = position.z;
@@ -121,6 +134,21 @@ public:
         
 
     void Draw() {
+        // Dibujar la estela si está habilitada
+        if (showTrail && trail.size() > 0) {
+            for (size_t i = 0; i < trail.size(); i++) {
+                // Calcular la opacidad basada en la posición en la estela (más reciente = más opaco)
+                // Los puntos más recientes (i más grande) tienen más opacidad
+                float alpha = (float)(i + 1) / (float)trail.size();
+                Color trailColor = color;
+                trailColor.a = (unsigned char)(alpha * 255);  // Opacidad completa para los más recientes
+                
+                // Dibujar esfera del mismo tamaño que la bola en cada punto de la estela
+                DrawSphere(trail[i], radius, trailColor);
+            }
+        }
+        
+        // Dibujar la pelota
         DrawSphere(position, radius, color);
         //DrawSphereWires(position, radius, 16, 16, BLACK);
     }
@@ -132,6 +160,8 @@ public:
         spin = spn;
         isMoving = true;
         previousZ = pos.z;
+        trail.clear();  // Limpiar la estela
+        trail.push_back(pos);  // Inicializar con la nueva posición
     }
 
     // Getters
