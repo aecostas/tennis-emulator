@@ -81,6 +81,7 @@ FLAGS=(
     -s INITIAL_MEMORY=67108864
     -s MODULARIZE=1
     -s EXPORT_NAME="createTennisEmulatorModule"
+    -s EXPORTED_FUNCTIONS="['_main','_shootBall','_setBallAngle','_malloc','_free']"
     -s USE_GLFW=3
     -s USE_WEBGL2=1
     -s FULL_ES3=1

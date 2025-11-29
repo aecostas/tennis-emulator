@@ -59,7 +59,15 @@ public:
 
     void Draw() {
         DrawSphere(position, radius, color);
-        DrawSphereWires(position, radius, 16, 16, BLACK);
+        //DrawSphereWires(position, radius, 16, 16, BLACK);
+    }
+
+    // Resetear la pelota a una posición y velocidad inicial
+    void Reset(Vector3 pos, Vector3 vel, Vector3 spn = {0.0f, 0.0f, 0.0f}) {
+        position = pos;
+        velocity = vel;
+        spin = spn;
+        isMoving = true;
     }
 
     // Getters

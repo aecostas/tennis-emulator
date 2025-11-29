@@ -27,27 +27,81 @@ float cameraDistance = 0.0f;
 float cameraAngleX = 0.0f;  // Ángulo horizontal (azimuth)
 float cameraAngleY = 0.0f;  // Ángulo vertical (elevation)
 const float ROTATION_SENSITIVITY = 0.005f;
-const float ZOOM_SENSITIVITY = 5.0f;
+const float ZOOM_SENSITIVITY = 20.0f;
 const float PAN_SENSITIVITY = 0.5f;
 const float MIN_DISTANCE = 100.0f;
 const float MAX_DISTANCE = 2000.0f;
 
-// Pelota - empieza cerca de la cámara (extremo inferior de la pista) y se mueve hacia adelante
-Ball3D pelota({court.GetMaxX() / 2, 50.0f, 50.0f}, 15.0f, RED, {0.0f, -300.0f, 800.0f}, {20.0f, 0.0f, -10.0f});
+// Pelota - se inicializará en main()
+Vector3 ballInitialPos;
+float ballInitialSpeed = 1500.0f;  // Velocidad inicial (magnitud)
+float ballInitialAngle = 0.0f;     // Ángulo horizontal (en grados, 0 = hacia adelante)
+float ballInitialElevation = -20.0f; // Ángulo vertical (en grados, negativo = hacia abajo)
+Vector3 ballInitialSpin = {20.0f, 0.0f, -10.0f};
+Ball3D pelota({0.0f, 50.0f, 50.0f}, 15.0f, RED, {0.0f, 0.0f, 0.0f}); // Empieza sin movimiento
 
 // Funciones
 void UpdateDrawFrame(void);
 void UpdateCameraControls(void);
 Vector3 CalculateCameraPosition(Vector3 target, float distance, float angleX, float angleY);
 
+// Función auxiliar para calcular velocidad desde ángulo y velocidad
+Vector3 CalculateVelocityFromAngle(float speed, float angleDeg, float elevationDeg) {
+    // Convertir grados a radianes
+    float angleRad = angleDeg * M_PI / 180.0f;
+    float elevationRad = elevationDeg * M_PI / 180.0f;
+    
+    // Calcular componentes de velocidad
+    float velX = speed * cosf(elevationRad) * sinf(angleRad);
+    float velY = speed * sinf(elevationRad);
+    float velZ = speed * cosf(elevationRad) * cosf(angleRad);
+    
+    return {velX, velY, velZ};
+}
+
+// Función exportada para disparar la pelota desde JavaScript
+extern "C" {
+    void EMSCRIPTEN_KEEPALIVE shootBall() {
+        Vector3 vel = CalculateVelocityFromAngle(ballInitialSpeed, ballInitialAngle, ballInitialElevation);
+        pelota.Reset(ballInitialPos, vel, ballInitialSpin);
+    }
+    
+    // Función para configurar el ángulo y velocidad inicial
+    void EMSCRIPTEN_KEEPALIVE setBallAngle(float angleDeg, float elevationDeg, float speed) {
+        ballInitialAngle = angleDeg;
+        ballInitialElevation = elevationDeg;
+        ballInitialSpeed = speed;
+    }
+}
+
+
 int main(void)
 {
     // Inicializar semilla
     srand(time(nullptr));
 
+    // Habilitar anti-aliasing para suavizar las líneas
+    SetConfigFlags(FLAG_MSAA_4X_HINT);
+
     // Inicializar ventana
     InitWindow(screenWidth, screenHeight, "Simulador de Tenis 3D");
+    
+    // Verificar que la ventana se inicializó correctamente
+    if (!IsWindowReady()) {
+        #ifdef PLATFORM_WEB
+        emscripten_run_script("console.error('[WASM] Error: Ventana no inicializada');");
+        #endif
+        return 1;
+    }
+    
     SetTargetFPS(60);
+
+    // Inicializar posición inicial de la pelota
+    ballInitialPos = {court.GetMaxX() / 2, 50.0f, 50.0f};
+    pelota.Reset(ballInitialPos, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f});
+    
+    // Calcular velocidad inicial basada en ángulos
+    Vector3 initialVel = CalculateVelocityFromAngle(ballInitialSpeed, ballInitialAngle, ballInitialElevation);
 
     // Configurar cámara 3D - en uno de los extremos de la pista con mejor ángulo para ver profundidad
     camera.target = {court.GetMaxX() / 2, 50.0f, court.GetMaxZ() * 0.6f};  // punto de enfoque
@@ -139,9 +193,9 @@ void UpdateCameraControls(void) {
             cameraAngleX -= mouseDelta.x * ROTATION_SENSITIVITY;
             cameraAngleY += mouseDelta.y * ROTATION_SENSITIVITY;
             
-            // Limitar el ángulo vertical para evitar voltear la cámara
+            // Limitar el ángulo vertical para evitar voltear la cámara y ver desde abajo
             if (cameraAngleY > 1.5f) cameraAngleY = 1.5f;
-            if (cameraAngleY < -1.5f) cameraAngleY = -1.5f;
+            if (cameraAngleY < -0.1f) cameraAngleY = -0.1f;  // No permitir ver desde abajo de la pista
             
             camera.position = CalculateCameraPosition(camera.target, cameraDistance, cameraAngleX, cameraAngleY);
         }
@@ -163,12 +217,17 @@ void UpdateCameraControls(void) {
 
 void UpdateDrawFrame(void)
 {
+    // Verificar que la ventana esté lista
+    if (!IsWindowReady()) {
+        return;
+    }
+    
     float deltaTime = GetFrameTime();
 
     // Actualizar controles de cámara
     UpdateCameraControls();
 
-    // Actualizar la pelota
+    // Actualizar la pelota (solo si está en movimiento)
     pelota.Update(deltaTime, court.GetFloorY(), court.GetMaxX(), court.GetMaxZ());
 
     // Dibujado
@@ -186,7 +245,7 @@ void UpdateDrawFrame(void)
     EndMode3D();
 
     // Texto informativo
-    DrawText("Pelota de tenis 3D con rebote y spin", 10, 10, 20, DARKGRAY);
+    DrawText("Pelota de tenis 3D con rebote y spin!!!", 10, 10, 20, DARKGRAY);
     DrawText("Click izquierdo + arrastrar: Rotar | Rueda: Zoom | Shift + arrastrar: Pan", 10, 35, 16, DARKGRAY);
 
     EndDrawing();
