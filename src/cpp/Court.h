@@ -58,9 +58,6 @@ private:
     void DrawNetMesh() const;
     void DrawNetCenterStrap() const;
     
-    // Función auxiliar para calcular la altura de la red en cualquier punto horizontal
-    float GetNetHeightAtX(float x) const;
-    
 public:
     // Constructor: recibe el ancho de la pista (la longitud se calcula con proporción real)
     Court(float courtWidth, float floorY = 0.0f);
@@ -74,6 +71,9 @@ public:
     float GetFloorY() const { return floorY; }
     float GetMaxX() const { return width; }
     float GetMaxZ() const { return length; }
+    
+    // Función para calcular la altura de la red en cualquier punto horizontal
+    float GetNetHeightAtX(float x) const;
 };
 
 #endif // COURT_H

@@ -2,6 +2,7 @@
 #define BALL3D_H
 
 #include "raylib.h"
+#include "Court.h"
 #include <cmath>
 
 class Ball3D {
@@ -12,6 +13,7 @@ private:
 
     Vector3 velocity;       // Velocidad 3D
     bool isMoving;
+    float previousZ;        // Posición Z anterior para detectar cruce de la red
 
     const float gravity = 980.0f;      // Gravedad en px/s^2
     const float restitution = 0.7f;    // Rebote vertical
@@ -21,18 +23,78 @@ private:
 
 public:
     Ball3D(Vector3 pos, float rad, Color col, Vector3 vel, Vector3 spn = {0.0f, 0.0f, 0.0f})
-        : position(pos), radius(rad), color(col), velocity(vel), spin(spn), isMoving(true) {}
+        : position(pos), radius(rad), color(col), velocity(vel), spin(spn), isMoving(true), previousZ(pos.z) {}
 
-        void Update(float deltaTime, float floorY, float maxX, float maxZ) {
+        void Update(float deltaTime, float floorY, float maxX, float maxZ, float netZ, const Court& court) {
             if (!isMoving) return;
         
             // Aplicar gravedad vertical (hacia abajo)
             velocity.y -= gravity * deltaTime;
         
+            // Calcular nueva posición
+            Vector3 newPosition = position;
+            newPosition.x += velocity.x * deltaTime;
+            newPosition.y += velocity.y * deltaTime;
+            newPosition.z += velocity.z * deltaTime;
+        
+            // Detectar colisión con la red ANTES de actualizar la posición
+            // Considerar el radio de la pelota: lo que choca es el borde exterior
+            bool hitNet = false;
+            
+            // Determinar la dirección del movimiento en Z
+            float deltaZ = newPosition.z - position.z;
+            if (std::abs(deltaZ) > 0.001f) {  // Solo si hay movimiento significativo en Z
+                // Calcular el borde de la pelota que está más cerca de la red
+                // Si se mueve hacia adelante (deltaZ > 0), el borde delantero es position.z + radius
+                // Si se mueve hacia atrás (deltaZ < 0), el borde trasero es position.z - radius
+                float previousEdgeZ = position.z + (deltaZ > 0 ? radius : -radius);
+                float newEdgeZ = newPosition.z + (deltaZ > 0 ? radius : -radius);
+                
+                // Verificar si el borde de la pelota está cruzando o cruzó la red
+                bool previousWasBeforeNet = previousEdgeZ < netZ;
+                bool newIsAfterNet = newEdgeZ >= netZ;
+                bool previousWasAfterNet = previousEdgeZ > netZ;
+                bool newIsBeforeNet = newEdgeZ < netZ;
+                
+                // Si el borde de la pelota cruzó la red
+                if ((previousWasBeforeNet && newIsAfterNet) || (previousWasAfterNet && newIsBeforeNet)) {
+                    // Verificar si la altura de la pelota es menor que la altura de la red
+                    // Usar la posición intermedia (en la red) para la verificación
+                    float t = (netZ - previousEdgeZ) / (newEdgeZ - previousEdgeZ);
+                    float collisionX = position.x + (newPosition.x - position.x) * t;
+                    float collisionY = position.y + (newPosition.y - position.y) * t;
+                    
+                    float netHeight = court.GetNetHeightAtX(collisionX);
+                    float ballHeightAboveFloor = collisionY - floorY;
+                    
+                    // Si cualquier parte de la pelota está por debajo de la altura de la red
+                    // (el punto más bajo de la pelota es ballHeightAboveFloor - radius)
+                    if (ballHeightAboveFloor - radius < netHeight) {
+                        hitNet = true;
+                        
+                        // Reposicionar la pelota del lado correcto de la red
+                        // Colocar el borde exterior de la pelota justo antes/después de la red
+                        if (previousWasBeforeNet) {
+                            // Venía desde antes de la red, dejarla justo antes
+                            newPosition.z = netZ - radius - 0.1f; // Pequeño margen para evitar que quede exactamente en la red
+                        } else {
+                            // Venía desde después de la red, dejarla justo después
+                            newPosition.z = netZ + radius + 0.1f; // Pequeño margen
+                        }
+                        
+                        // Detener el movimiento horizontal y dejar que caiga por gravedad
+                        velocity.x = 0.0f;
+                        velocity.z = 0.0f;
+                        spin = {0.0f, 0.0f, 0.0f};
+                    }
+                }
+            }
+            
             // Actualizar posición
-            position.x += velocity.x * deltaTime;
-            position.y += velocity.y * deltaTime;
-            position.z += velocity.z * deltaTime;
+            position = newPosition;
+            
+            // Guardar posición Z actual para la próxima actualización
+            previousZ = position.z;
         
             // Rebote con el suelo
             if (position.y <= floorY + radius) {
@@ -68,6 +130,7 @@ public:
         velocity = vel;
         spin = spn;
         isMoving = true;
+        previousZ = pos.z;
     }
 
     // Getters

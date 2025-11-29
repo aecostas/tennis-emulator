@@ -1,5 +1,32 @@
 #ifdef PLATFORM_WEB
     #include <emscripten/emscripten.h>
+    #include <cstdio>
+    #include <cstdarg>
+    #include <string>
+    
+    // Función helper para hacer console.log desde C++ (soporta formato como printf)
+    inline void console_log(const char* format, ...) {
+        char buffer[512];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+        std::string script = "console.log('";
+        script += buffer;
+        script += "');";
+        emscripten_run_script(script.c_str());
+    }
+#else
+    // Para plataformas no-web, usar printf normal
+    #include <cstdio>
+    #include <cstdarg>
+    inline void console_log(const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+        vprintf(format, args);
+        va_end(args);
+        printf("\n");
+    }
 #endif
 
 #include "raylib.h"
@@ -95,6 +122,10 @@ int main(void)
     }
     
     SetTargetFPS(60);
+    
+    // Ejemplo de uso de console_log
+    console_log("Simulador de Tenis 3D inicializado");
+    console_log("Ancho de pista: %.2f unidades", COURT_WIDTH);
 
     // Inicializar posición inicial de la pelota
     ballInitialPos = {court.GetMaxX() / 2, 50.0f, 50.0f};
@@ -217,6 +248,8 @@ void UpdateCameraControls(void) {
 
 void UpdateDrawFrame(void)
 {
+
+    
     // Verificar que la ventana esté lista
     if (!IsWindowReady()) {
         return;
@@ -228,7 +261,8 @@ void UpdateDrawFrame(void)
     UpdateCameraControls();
 
     // Actualizar la pelota (solo si está en movimiento)
-    pelota.Update(deltaTime, court.GetFloorY(), court.GetMaxX(), court.GetMaxZ());
+    float netZ = court.GetMaxZ() / 2.0f;  // Centro de la pista (donde está la red)
+    pelota.Update(deltaTime, court.GetFloorY(), court.GetMaxX(), court.GetMaxZ(), netZ, court);
 
     // Dibujado
     BeginDrawing();
